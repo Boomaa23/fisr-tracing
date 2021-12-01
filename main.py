@@ -49,7 +49,8 @@ def trace(ray_origin, ray_dir, spheres, depth):
         return Vec3f(2, 2, 2)
     surface_color = Vec3f(0, 0, 0)
     point_intersect = ray_origin + ray_dir * tnear
-    normal_intersect = sphere.center.normalize()
+    normal_intersect = point_intersect - sphere.center
+    normal_intersect = normal_intersect.normalize()
     bias = 1e-4
     inside = False
     if ray_dir.dot(normal_intersect) > 0:
@@ -64,37 +65,34 @@ def trace(ray_origin, ray_dir, spheres, depth):
         refr = Vec3f(0, 0, 0)
         if sphere.transparency:
             ior = 1.1
-            eta = 1 / ior if inside else ior
+            eta = ior if inside else 1 / ior
             cosi = -normal_intersect.dot(ray_dir)
             k = 1 - eta * eta * (1 - cosi * cosi)
             refr_dir = ray_dir * eta + normal_intersect * (eta * cosi - math.sqrt(k))
             refr_dir.normalize()
             refr = trace(point_intersect - normal_intersect * bias, refr_dir, spheres, depth + 1)
-        surface_color = refl * fresnel_effect + refr * (1 - fresnel_effect) * sphere.transparency * sphere.surface_color
+        surface_color = (refl * fresnel_effect + refr * (1 - fresnel_effect) * sphere.transparency) * sphere.surface_color
     else:
         for i in range(len(spheres)):
             if spheres[i].emission_color.x > 0:
                 transmission = Vec3f(1, 1, 1)
                 light_dir = spheres[i].center - point_intersect
                 light_dir.normalize()
-                t0 = None
-                t1 = None
                 for j in range(len(spheres)):
                     if i != j:
                         intersect = spheres[j].calc_intersection(point_intersect + normal_intersect * bias, light_dir)
                         if intersect[0]:
-                            t0 = intersect[1]
-                            t1 = intersect[2]
+                            transmission = Vec3f(0, 0, 0)
                             break
                 surface_color += sphere.surface_color * transmission * \
-                    max(0, normal_intersect.dot(light_dir))#, spheres[i].emission_color)
+                    max(0, normal_intersect.dot(light_dir)) * spheres[i].emission_color
     return surface_color + sphere.emission_color
 
 def make_spheres():
     return [
         Sphere(Vec3f( 0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0),
-        Sphere(Vec3f( 0.0,      0, -20),     4, Vec3f(1.00, 0.32, 0.36), 1, 0.5),
-        Sphere(Vec3f( 5.0,     -1, -15),     2, Vec3f(0.90, 0.76, 0.46), 1, 0.0),
+        Sphere(Vec3f( 0.0,      0, -20),     4, Vec3f(1.00, 0.32, 0.36), 1, 0.0),
+        Sphere(Vec3f( 5.0,     -1, -15),     2, Vec3f(0.90, 0.76, 0.46), 1, 0.5),
         Sphere(Vec3f( 5.0,      0, -25),     3, Vec3f(0.65, 0.77, 0.97), 1, 0.0),
         Sphere(Vec3f(-5.5,      0, -15),     3, Vec3f(0.90, 0.90, 0.90), 1, 0.0),
         Sphere(Vec3f( 0.0,     20, -30),     3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3, 3, 3))
@@ -121,9 +119,9 @@ def main():
         for y in range(HEIGHT):
             for x in range(WIDTH):
                 px = image[y][x]
-                out_ppm.write(struct.pack("f", min(1, px.x * 255)))
-                out_ppm.write(struct.pack("f", min(1, px.y * 255)))
-                out_ppm.write(struct.pack("f", min(1, px.z * 255)))
+                out_ppm.write(bytes([int(min(1, abs(px.x)) * 255)]))
+                out_ppm.write(bytes([int(min(1, abs(px.y)) * 255)]))
+                out_ppm.write(bytes([int(min(1, abs(px.z)) * 255)]))
 
 if __name__ == "__main__":
     main()
