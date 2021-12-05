@@ -1,16 +1,17 @@
-from util import Shape, Vec3f
+from util import Shape, Vec3f, Color
 import math
-import struct
 
 MAX_RAY_DEPTH = 5
 HEIGHT = 500
 WIDTH = 500
+FOV = 60
+BACKGROUND_COLOR = Vec3f(0.83, 0.94, 1)
+image = [[0 for _ in range(HEIGHT)] for _ in range(WIDTH)]
 
 class Sphere(Shape):
-    def __init__(self, center, radius, surface_color, reflection=0, transparency=0, emission_color=Vec3f(0, 0, 0)):
+    def __init__(self, center, radius, surface_color, reflection=0, transparency=0, emission_color=Color.BLACK):
         self.center = center
-        self.radius = radius
-        self.radiusSq = radius * radius
+        self.radius_sq = radius * radius
         self.surface_color = surface_color
         self.reflection = reflection
         self.transparency = transparency
@@ -22,9 +23,9 @@ class Sphere(Shape):
         if tca < 0:
             return (False,)
         d2 = l.dot(l) - tca * tca
-        if d2 > self.radiusSq:
+        if d2 > self.radius_sq:
             return (False,)
-        thc = math.sqrt(self.radiusSq - d2)
+        thc = math.sqrt(self.radius_sq - d2)
         return (True, tca - thc, tca + thc)
 
 def mix(a, b, mix):
@@ -46,8 +47,8 @@ def trace(ray_origin, ray_dir, spheres, depth):
                 tnear = t0
                 sphere = s
     if not sphere:
-        return Vec3f(2, 2, 2)
-    surface_color = Vec3f(0, 0, 0)
+        return BACKGROUND_COLOR
+    surface_color = Color.WHITE
     point_intersect = ray_origin + ray_dir * tnear
     normal_intersect = point_intersect - sphere.center
     normal_intersect = normal_intersect.normalize()
@@ -62,27 +63,27 @@ def trace(ray_origin, ray_dir, spheres, depth):
         refl_dir = ray_dir - normal_intersect * 2 * ray_dir.dot(normal_intersect)
         refl_dir.normalize()
         refl = trace(point_intersect + normal_intersect * bias, refl_dir, spheres, depth + 1)
-        refr = Vec3f(0, 0, 0)
+        refr = Color.BLACK
         if sphere.transparency:
             ior = 1.1
             eta = ior if inside else 1 / ior
             cosi = -normal_intersect.dot(ray_dir)
             k = 1 - eta * eta * (1 - cosi * cosi)
-            refr_dir = ray_dir * eta + normal_intersect * (eta * cosi - math.sqrt(k))
+            refr_dir = ray_dir * eta + normal_intersect * (eta * cosi - math.sqrt(abs(k)))
             refr_dir.normalize()
             refr = trace(point_intersect - normal_intersect * bias, refr_dir, spheres, depth + 1)
         surface_color = (refl * fresnel_effect + refr * (1 - fresnel_effect) * sphere.transparency) * sphere.surface_color
     else:
         for i in range(len(spheres)):
             if spheres[i].emission_color.x > 0:
-                transmission = Vec3f(1, 1, 1)
+                transmission = Color.WHITE
                 light_dir = spheres[i].center - point_intersect
                 light_dir.normalize()
                 for j in range(len(spheres)):
                     if i != j:
                         intersect = spheres[j].calc_intersection(point_intersect + normal_intersect * bias, light_dir)
                         if intersect[0]:
-                            transmission = Vec3f(0, 0, 0)
+                            transmission = Color.BLACK
                             break
                 surface_color += sphere.surface_color * transmission * \
                     max(0, normal_intersect.dot(light_dir)) * spheres[i].emission_color
@@ -95,33 +96,33 @@ def make_spheres():
         Sphere(Vec3f( 5.0,     -1, -15),     2, Vec3f(0.90, 0.76, 0.46), 1, 0.5),
         Sphere(Vec3f( 5.0,      0, -25),     3, Vec3f(0.65, 0.77, 0.97), 1, 0.0),
         Sphere(Vec3f(-5.5,      0, -15),     3, Vec3f(0.90, 0.90, 0.90), 1, 0.0),
-        Sphere(Vec3f( 0.0,     20, -30),     3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3, 3, 3))
+        Sphere(Vec3f( 0.0,     20, -30),     3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Color.WHITE)
     ]
 
 def main():
-    inv_width = 1 / WIDTH
-    inv_height = 1 / HEIGHT
-    fov = 30
-    aspect_ratio = WIDTH / HEIGHT
-    angle = math.tan(math.pi * 0.5 * fov / 180)
     spheres = make_spheres()
 
-    image = [[0 for _ in range(HEIGHT)] for _ in range(WIDTH)]
+    angle = math.tan(math.pi * 0.5 * FOV / 180)
+    inv_width = 1 / WIDTH
+    inv_height = 1 / HEIGHT
+    aspect_ratio = WIDTH / HEIGHT
+
     for y in range(HEIGHT):
         for x in range(WIDTH):
             xx = (2 * ((x + 0.5) * inv_width) - 1) * angle * aspect_ratio
             yy = (1 - 2 * ((y + 0.5) * inv_height)) * angle
             ray_dir = Vec3f(xx, yy, -1).normalize(); 
-            image[y][x] = trace(Vec3f(0, 0, 0), ray_dir, spheres, 0)
-    
-    with open("out.ppm", "wb") as out_ppm:
-        out_ppm.write(f'P6\n{WIDTH} {HEIGHT}\n255\n'.encode())
-        for y in range(HEIGHT):
-            for x in range(WIDTH):
-                px = image[y][x]
-                out_ppm.write(bytes([int(min(1, abs(px.x)) * 255)]))
-                out_ppm.write(bytes([int(min(1, abs(px.y)) * 255)]))
-                out_ppm.write(bytes([int(min(1, abs(px.z)) * 255)]))
+            image[y][x] = trace(Color.BLACK, ray_dir, spheres, 0)
+
+    out_ppm = open("out.ppm", "wb")
+    out_ppm.write(f'P6\n{WIDTH} {HEIGHT}\n255\n'.encode())
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            px = image[y][x]
+            out_ppm.write(bytes([int(min(1, abs(px.x)) * 255)]))
+            out_ppm.write(bytes([int(min(1, abs(px.y)) * 255)]))
+            out_ppm.write(bytes([int(min(1, abs(px.z)) * 255)]))
+    out_ppm.close()
 
 if __name__ == "__main__":
     main()

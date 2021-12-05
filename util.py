@@ -2,12 +2,11 @@ import math
 import struct
 
 def fast_inv_sqrt(number):
-    return 1 / math.sqrt(number)
-    # y = number
-    # i = struct.unpack("i", struct.pack("f", y))[0]
-    # i = 0x5f3759df - (i >> 1)
-    # y = struct.unpack("f", struct.pack("i", i))[0]
-    # return y * (1.5 - (number * 0.5 * y * y))
+    y = number
+    i = struct.unpack("i", struct.pack("f", y))[0]
+    i = 0x5f3759df - (i >> 1)
+    y = struct.unpack("f", struct.pack("i", i))[0]
+    return y * (1.5 - (number * 0.5 * y * y))
 
 class Vec3f:
     def __init__(self, x, y, z):
@@ -16,19 +15,19 @@ class Vec3f:
         self.z = z
 
     def normalize(self):
-        normSq = self.sqLen(); 
-        if (normSq > 0):
-            invNor = fast_inv_sqrt(self.length())
-            self.x *= invNor
-            self.y *= invNor
-            self.z *= invNor
+        norm_sq = self.sq_len(); 
+        if (norm_sq > 0):
+            inv_norm = fast_inv_sqrt(self.length())
+            self.x *= inv_norm
+            self.y *= inv_norm
+            self.z *= inv_norm
         return self
 
-    def sqLen(self):
+    def sq_len(self):
         return self.x * self.x + self.y * self.y + self.z * self.z
 
     def length(self):
-        return math.sqrt(self.sqLen())
+        return math.sqrt(self.sq_len())
 
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
@@ -82,6 +81,10 @@ class Vec3f:
 
     def __str__(self):
         return f'[{self.x}, {self.y}, {self.z}]'
+
+class Color:
+    BLACK = Vec3f(0, 0, 0)
+    WHITE = Vec3f(1, 1, 1)
 
 class Shape:
     def calc_intersection(self, ray_origin, ray_dir):
