@@ -15,12 +15,10 @@ class Vec3f:
         self.z = z
 
     def normalize(self):
-        norm_sq = self.sq_len(); 
-        if (norm_sq > 0):
-            inv_norm = fast_inv_sqrt(self.length())
-            self.x *= inv_norm
-            self.y *= inv_norm
-            self.z *= inv_norm
+        inv_norm = fast_inv_sqrt(self.sq_len())
+        self.x *= inv_norm
+        self.y *= inv_norm
+        self.z *= inv_norm
         return self
 
     def sq_len(self):
@@ -82,10 +80,10 @@ class Vec3f:
     def __str__(self):
         return f'[{self.x}, {self.y}, {self.z}]'
 
-class Color:
+class Colors:
     BLACK = Vec3f(0, 0, 0)
     WHITE = Vec3f(1, 1, 1)
 
 class Shape:
-    def calc_intersection(self, ray_origin, ray_dir):
+    def is_intersecting(self, ray_origin, ray_dir):
         raise NotImplementedError()
