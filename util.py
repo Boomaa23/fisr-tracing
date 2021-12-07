@@ -30,6 +30,20 @@ class Vec3f:
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
 
+    def midpoint(self, other):
+        return Vec3f(
+            (self.x + other.x) / 2,
+            (self.y + other.y) / 2,
+            (self.z + other.z) / 2
+        )
+
+    def inverse(self):
+        return Vec3f(
+            1 / self.x,
+            1 / self.y,
+            1 / self.z
+        )
+
     def __add__(self, other):
         return Vec3f(
             self.x + other.x,
@@ -83,7 +97,3 @@ class Vec3f:
 class Colors:
     BLACK = Vec3f(0, 0, 0)
     WHITE = Vec3f(1, 1, 1)
-
-class Shape:
-    def is_intersecting(self, ray_origin, ray_dir):
-        raise NotImplementedError()
