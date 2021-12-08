@@ -4,8 +4,8 @@ import math
 import datetime
 
 MAX_RAY_DEPTH = 15
-HEIGHT = 1200
-WIDTH = 1200
+HEIGHT = 1440
+WIDTH = 1920
 FOV = 30
 
 def mix(a, b, mix):

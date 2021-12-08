@@ -1,12 +1,5 @@
+import fisr
 import math
-import struct
-
-def fast_inv_sqrt(number):
-    y = number
-    i = struct.unpack("i", struct.pack("f", y))[0]
-    i = 0x5f3759df - (i >> 1)
-    y = struct.unpack("f", struct.pack("i", i))[0]
-    return y * (1.5 - (number * 0.5 * y * y))
 
 class Vec3f:
     def __init__(self, x, y, z):
@@ -15,7 +8,7 @@ class Vec3f:
         self.z = z
 
     def normalize(self):
-        inv_norm = fast_inv_sqrt(self.sq_len())
+        inv_norm = fisr.fast_inv_sqrt(self.sq_len())
         self.x *= inv_norm
         self.y *= inv_norm
         self.z *= inv_norm
